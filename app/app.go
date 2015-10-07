@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
         "fmt"
+        "os/exec"
 )
 
 func main() {
@@ -18,6 +19,9 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
                 fmt.Println(request.Method, request.URL, "(rejected)")
                 return
         }
-        fmt.Fprintf(response, "<h1>Hello, World!</h1>");
         fmt.Println(request.Method, request.URL, "(accepted)")
+        cmd := exec.Command("/usr/local/bin/wkhtmltopdf", "http://www.google.com/", "-")
+        response.Header().Set("Content-Type", "application/pdf")
+        cmd.Stdout = response
+        cmd.Run()
 }
