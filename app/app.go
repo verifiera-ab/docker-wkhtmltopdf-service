@@ -17,6 +17,7 @@ func main() {
 
 type documentRequest struct {
         Content string
+        Options map[string]interface{}
 }
 
 func requestHandler(response http.ResponseWriter, request *http.Request) {
@@ -37,6 +38,9 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
                 response.WriteHeader(http.StatusBadRequest)
                 fmt.Println(request.Method, request.URL, "400 bad request (invalid JSON)")
                 return
+        }
+        for key, element := range req.Options {
+                fmt.Println("Option", key, "=", element)
         }
         cmd := exec.Command("/usr/local/bin/wkhtmltopdf", "-", "-")
         response.Header().Set("Content-Type", "application/pdf")
