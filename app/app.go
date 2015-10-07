@@ -16,10 +16,16 @@ func main() {
 func requestHandler(response http.ResponseWriter, request *http.Request) {
         if request.URL.Path != "/" {
                 response.WriteHeader(http.StatusNotFound)
-                fmt.Println(request.Method, request.URL, "(rejected)")
+                fmt.Println(request.Method, request.URL, "404 not found")
                 return
         }
-        fmt.Println(request.Method, request.URL, "(accepted)")
+        if request.Method != "POST" {
+                response.Header().Set("Allow", "POST")
+                response.WriteHeader(http.StatusMethodNotAllowed)
+                fmt.Println(request.Method, request.URL, "405 not allowed")
+                return
+        }
+        defer fmt.Println(request.Method, request.URL, "200 OK")
         cmd := exec.Command("/usr/local/bin/wkhtmltopdf", "http://www.google.com/", "-")
         response.Header().Set("Content-Type", "application/pdf")
         cmd.Stdout = response
