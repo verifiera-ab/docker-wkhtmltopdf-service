@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"encoding/json"
-	"io"
+	"strings"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 }
 
 type documentRequest struct {
-	Content string
+	Url string
 	Options map[string]interface{}
 }
 
@@ -39,22 +39,24 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 		fmt.Println(request.Method, request.URL, "400 bad request (invalid JSON)")
 		return
 	}
+	segments := make([]string, 0)
 	for key, element := range req.Options {
-		fmt.Println("Option", key, "=", element)
+		if element == true {
+			// if it was parsed from the JSON as an actual boolean, 
+			// convert to command-line single argument  (--foo)
+			segments = append(segments, fmt.Sprintf("--%v", key))
+		} else if element != false {
+			// Otherwise, use command-line argument with value (--foo bar)
+			segments = append(segments, fmt.Sprintf("--%v", key), fmt.Sprintf("%v", element))
+		}
 	}
-	cmd := exec.Command("/usr/local/bin/wkhtmltopdf", "-", "-")
+	const programFile = "/usr/local/bin/wkhtmltopdf"
+	segments = append(segments, req.Url, "-")
+	fmt.Println("\tRunning:", programFile, strings.Join(segments, " "))
+	cmd := exec.Command(programFile, segments...)
 	response.Header().Set("Content-Type", "application/pdf")
 	cmd.Stdout = response
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		response.WriteHeader(http.StatusInternalServerError)
-		fmt.Println(request.Method, request.URL, "500 internal server error")
-		fmt.Println("Error dump =", err)
-		return
-	}
 	cmd.Start()
 	defer cmd.Wait()
-	io.WriteString(stdin, req.Content)
-	stdin.Close()
 	fmt.Println(request.Method, request.URL, "200 OK")
 }
