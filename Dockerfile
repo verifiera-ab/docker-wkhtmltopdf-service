@@ -10,7 +10,8 @@ ENV DOWNLOAD_URL "http://download.gna.org/wkhtmltopdf/${WKHTML_MAJOR}/${WKHTML_M
 
 # Create system user first so the User ID gets assigned
 # consistently, regardless of dependencies added later
-RUN apt-get update && \
+RUN useradd -rM appuser && \
+    apt-get update && \
     apt-get install -y --no-install-recommends curl \
        fontconfig libfontconfig1 libfreetype6 \
        libpng12-0 libjpeg62-turbo \
@@ -24,9 +25,13 @@ RUN apt-get update && \
 
 COPY /app /usr/src/app
 
-RUN mkdir /app && cd /usr/src/app && go build -v -o /app/app
+RUN mkdir /app && \
+    cd /usr/src/app && \
+    go build -v -o /app/app && \
+    chown -R appuser:appuser /app
 
+USER appuser
 WORKDIR /app
-EXPOSE 80
+EXPOSE 3000
 
 ENTRYPOINT [ "/app/app" ]
