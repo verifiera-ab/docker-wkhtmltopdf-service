@@ -1,2 +1,2 @@
 #!/bin/bash
-docker run -ti --rm -p 3000:3000 grouptree/wkhtmltopdf-service
+docker run -ti --rm $@ grouptree/wkhtmltopdf-service

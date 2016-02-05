@@ -1,3 +1,2 @@
 #!/bin/bash
-docker run --rm -v "$PWD"/app:/usr/src/app -v "$PWD"/bin:/output -w /usr/src/app golang:1.4 go build -v -o /output/app
 docker build --rm -t grouptree/wkhtmltopdf-service .
