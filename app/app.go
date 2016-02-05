@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	const bindAddress = ":3000"
+	const bindAddress = ":80"
 	http.HandleFunc("/", requestHandler)
 	fmt.Println("Http server listening on", bindAddress)
 	http.ListenAndServe(bindAddress, nil)

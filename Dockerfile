@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM golang:1.4
 
 MAINTAINER Potiguar Faga <potz@potz.me>
 
@@ -10,8 +10,7 @@ ENV DOWNLOAD_URL "http://download.gna.org/wkhtmltopdf/${WKHTML_MAJOR}/${WKHTML_M
 
 # Create system user first so the User ID gets assigned
 # consistently, regardless of dependencies added later
-RUN useradd -rM appuser && \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends curl \
        fontconfig libfontconfig1 libfreetype6 \
        libpng12-0 libjpeg62-turbo \
@@ -23,11 +22,11 @@ RUN useradd -rM appuser && \
     apt-get purge -y curl && \
     rm -rf /var/lib/apt/lists/*
 
-COPY ./bin/app /app/
-RUN chown -R appuser:appuser /app
-USER appuser
+COPY /app /usr/src/app
+
+RUN mkdir /app && cd /usr/src/app && go build -v -o /app/app
+
 WORKDIR /app
+EXPOSE 80
 
-EXPOSE 3000
-
-CMD [ "/app/app" ]
+ENTRYPOINT [ "/app/app" ]
