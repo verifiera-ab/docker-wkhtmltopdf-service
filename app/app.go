@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/url"
 	"fmt"
 	"os/exec"
 	"encoding/json"
@@ -18,6 +19,7 @@ func main() {
 type documentRequest struct {
 	Url string
 	Options map[string]interface{}
+	Cookies map[string]string
 }
 
 func logOutput(request *http.Request, message string) {
@@ -54,6 +56,9 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 			// Otherwise, use command-line argument with value (--foo bar)
 			segments = append(segments, fmt.Sprintf("--%v", key), fmt.Sprintf("%v", element))
 		}
+	}
+	for key, value := range req.Cookies {
+		segments = append(segments, "--cookie", key, url.QueryEscape(value))
 	}
 	const programFile = "/usr/local/bin/wkhtmltopdf"
 	segments = append(segments, req.Url, "-")
