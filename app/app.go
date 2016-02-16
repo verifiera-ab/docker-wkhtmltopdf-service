@@ -18,6 +18,7 @@ func main() {
 
 type documentRequest struct {
 	Url string
+	Output string
 	Options map[string]interface{}
 	Cookies map[string]string
 }
@@ -60,11 +61,26 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 	for key, value := range req.Cookies {
 		segments = append(segments, "--cookie", key, url.QueryEscape(value))
 	}
-	const programFile = "/usr/local/bin/wkhtmltopdf"
+	var programFile string
+	var contentType string
+	switch req.Output {
+		case "jpg":
+			programFile = "/usr/local/bin/wkhtmltoimage"
+			contentType = "image/jpeg"
+			segments = append(segments, "--format", "jpg")
+		case "png":
+			programFile = "/usr/local/bin/wkhtmltoimage"
+			contentType = "image/png"
+			segments = append(segments, "--format", "png")
+		default:
+			// defaults to pdf
+			programFile = "/usr/local/bin/wkhtmltopdf"
+			contentType = "application/pdf"
+	}
 	segments = append(segments, req.Url, "-")
 	fmt.Println("\tRunning:", programFile, strings.Join(segments, " "))
 	cmd := exec.Command(programFile, segments...)
-	response.Header().Set("Content-Type", "application/pdf")
+	response.Header().Set("Content-Type", contentType)
 	cmd.Stdout = response
 	cmd.Start()
 	defer cmd.Wait()
