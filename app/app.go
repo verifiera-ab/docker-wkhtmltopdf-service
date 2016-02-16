@@ -19,6 +19,8 @@ func main() {
 type documentRequest struct {
 	Url string
 	Output string
+	// TODO: whitelist options that can be passed to avoid errors,
+	// log warning when different options get passed
 	Options map[string]interface{}
 	Cookies map[string]string
 }
@@ -84,5 +86,6 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 	cmd.Stdout = response
 	cmd.Start()
 	defer cmd.Wait()
+	// TODO: check if Stderr has anything, and issue http 500 instead.
 	logOutput(request, "200 OK")
 }
