@@ -67,11 +67,11 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 		case "jpg":
 			programFile = "/usr/local/bin/wkhtmltoimage"
 			contentType = "image/jpeg"
-			segments = append(segments, "--format", "jpg")
+			segments = append(segments, "--format", "jpg", "-q")
 		case "png":
 			programFile = "/usr/local/bin/wkhtmltoimage"
 			contentType = "image/png"
-			segments = append(segments, "--format", "png")
+			segments = append(segments, "--format", "png", "-q")
 		default:
 			// defaults to pdf
 			programFile = "/usr/local/bin/wkhtmltopdf"
