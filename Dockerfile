@@ -34,4 +34,4 @@ USER appuser
 WORKDIR /app
 EXPOSE 3000
 
-ENTRYPOINT [ "/app/app" ]
+CMD [ "/app/app" ]
