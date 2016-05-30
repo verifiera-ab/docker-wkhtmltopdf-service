@@ -8,15 +8,12 @@ The service listens on port 3000 for POST requests on the root path (`/`). Any o
 
 The body should contain a JSON-encoded object containing the following parameters:
 
-**url**: The URL of the page to convert.
+- **url**: The URL of the page to convert.
+- **output**: The type of document to generate, can be either `jpg`, `png` or `pdf`. Defauts to `pdf` if not specified. Depending on the output type the appropriate binary is called.
+- **options**: A list of key-value arguments that are passed on to the appropriate `wkhtmltopdf` binary. Boolean values are interpreted as flag arguments (e.g.: `--greyscale`).
+- **cookies**: A list of key-value arguments that are passed on to the appropriate `wkhtmltopdf` binary as separate `cookie` arguments.
 
-**output**: The type of document to generate, can be either `jpg`, `png` or `pdf`. Defauts to `pdf` if not specified. Depending on the output type the appropriate binary is called.
-
-**options**: A list of key-value arguments that are passed on to the appropriate `wkhtmltopdf` binary. Boolean values are interpreted as flag arguments (e.g.: `--greyscale`).
-
-**cookies**: A list of key-value arguments that are passed on to the appropriate `wkhtmltopdf` binary as separate `cookie` arguments.
-
-** Example: ** posting the following JSON:
+**Example:** posting the following JSON:
 
 ```
 {
@@ -34,7 +31,7 @@ The body should contain a JSON-encoded object containing the following parameter
 }
 ```
 
-would be equivalent to executing the following in the command-line:
+will have the effect of the following command-line being executed on the server:
 
 ```
 /usr/local/bin/wkhtmltoimage --margin-bottom 1cm --orientation Landscape --grayscale --cookie foo bar --cookie baz foo --format jpg -q http://www.google.com -
