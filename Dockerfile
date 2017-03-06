@@ -37,4 +37,7 @@ USER appuser
 WORKDIR /app
 EXPOSE 3000
 
-CMD [ "/app/app" ]
+# whether to run under SSL or not
+ENV SECURE true
+
+CMD ["/app/app"]

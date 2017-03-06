@@ -15,10 +15,21 @@ import (
 
 func main() {
 	const bindAddress = ":3000"
+	secure := strings.ToLower(strings.TrimSpace(os.Getenv("SECURE")))
+	if secure == "" {
+		secure = "true"
+	}
+
 	http.HandleFunc("/", requestHandler)
-	fmt.Println("Http server listening on", bindAddress)
 	baseDir := filepath.Dir(os.Args[0])
-	err := http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "ssl/cert.pem"), filepath.Join(baseDir, "ssl/key.pem"), nil)
+	var err error
+	if secure == "false" {
+		fmt.Println("INSECURE http server listening on", bindAddress)
+		err = http.ListenAndServe(bindAddress, nil)
+	} else {
+		fmt.Println("Secure https server listening on", bindAddress)
+		err = http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "ssl/cert.pem"), filepath.Join(baseDir, "ssl/key.pem"), nil)
+	}
 	if err != nil {
 		log.Panic(err)
 	}
