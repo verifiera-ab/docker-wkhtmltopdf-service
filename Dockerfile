@@ -1,4 +1,4 @@
-FROM golang:1.4
+FROM golang:1.7
 
 MAINTAINER Potiguar Faga <potz@potz.me>
 
