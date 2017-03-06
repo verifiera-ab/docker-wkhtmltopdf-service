@@ -28,7 +28,8 @@ COPY /app /usr/src/app
 RUN mkdir /app && \
     cd /usr/src/app && \
     go build -v -o /app/app && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    cp key.pem cert.pem /app
 
 USER appuser
 WORKDIR /app

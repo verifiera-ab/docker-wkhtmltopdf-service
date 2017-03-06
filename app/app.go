@@ -7,16 +7,25 @@ import (
 	"os/exec"
 	"encoding/json"
 	"strings"
+	"io"
+	"path/filepath"
+	"os"
+	"log"
 )
 
 func main() {
 	const bindAddress = ":3000"
 	http.HandleFunc("/", requestHandler)
 	fmt.Println("Http server listening on", bindAddress)
-	http.ListenAndServe(bindAddress, nil)
+	baseDir := filepath.Dir(os.Args[0])
+	err := http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "cert.pem"), filepath.Join(baseDir, "key.pem"), nil)
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 type documentRequest struct {
+	Content string
 	Url string
 	Output string
 	// TODO: whitelist options that can be passed to avoid errors,
@@ -79,12 +88,26 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 			programFile = "/usr/local/bin/wkhtmltopdf"
 			contentType = "application/pdf"
 	}
-	segments = append(segments, req.Url, "-")
+	if req.Content != "" {
+		segments = append(segments, "-", "-")
+	} else {
+		segments = append(segments, req.Url, "-")
+	}
 	fmt.Println("\tRunning:", programFile, strings.Join(segments, " "))
+
 	cmd := exec.Command(programFile, segments...)
 	response.Header().Set("Content-Type", contentType)
 	cmd.Stdout = response
+	var cmdStdin io.WriteCloser
+	if req.Content != "" {
+		cmdStdin, _ = cmd.StdinPipe()
+	}
+
 	cmd.Start()
+	if cmdStdin != nil {
+		cmdStdin.Write([]byte(req.Content))
+		cmdStdin.Close()
+	}
 	defer cmd.Wait()
 	// TODO: check if Stderr has anything, and issue http 500 instead.
 	logOutput(request, "200 OK")
