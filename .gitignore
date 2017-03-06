@@ -1,2 +1,3 @@
 # Ignore the built app binary
 bin/app
+app/ssl/*.pem

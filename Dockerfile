@@ -26,10 +26,12 @@ RUN useradd -rM appuser && \
 COPY /app /usr/src/app
 
 RUN mkdir /app && \
+    mkdir /app/ssl && \
     cd /usr/src/app && \
     go build -v -o /app/app && \
-    chown -R appuser:appuser /app && \
-    cp key.pem cert.pem /app
+    chown -R appuser:appuser /app
+
+VOLUME /app/ssl
 
 USER appuser
 WORKDIR /app

@@ -18,7 +18,7 @@ func main() {
 	http.HandleFunc("/", requestHandler)
 	fmt.Println("Http server listening on", bindAddress)
 	baseDir := filepath.Dir(os.Args[0])
-	err := http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "cert.pem"), filepath.Join(baseDir, "key.pem"), nil)
+	err := http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "ssl/cert.pem"), filepath.Join(baseDir, "ssl/key.pem"), nil)
 	if err != nil {
 		log.Panic(err)
 	}
