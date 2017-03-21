@@ -1,16 +1,20 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
-	"fmt"
-	"os/exec"
-	"encoding/json"
-	"strings"
-	"io"
-	"path/filepath"
 	"os"
-	"log"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	unipdf "github.com/unidoc/unidoc/pdf"
 )
 
 func main() {
@@ -35,10 +39,14 @@ func main() {
 	}
 }
 
+type batchRequest struct {
+	Output   string
+	Requests []*documentRequest
+}
+
 type documentRequest struct {
 	Content string
-	Url string
-	Output string
+	Url     string
 	// TODO: whitelist options that can be passed to avoid errors,
 	// log warning when different options get passed
 	Options map[string]interface{}
@@ -63,16 +71,99 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 	decoder := json.NewDecoder(request.Body)
-	var req documentRequest
-	if err := decoder.Decode(&req); err != nil {
+	var batchRequest batchRequest
+	if err := decoder.Decode(&batchRequest); err != nil {
 		response.WriteHeader(http.StatusBadRequest)
 		logOutput(request, "400 bad request (invalid JSON)")
 		return
 	}
+	if len(batchRequest.Requests) == 0 {
+		return
+	}
+
+	var programFile string
+	var contentType string
+	var contentArgs []string
+	isPdf := false
+	switch batchRequest.Output {
+	case "jpg":
+		programFile = "/usr/local/bin/wkhtmltoimage"
+		contentType = "image/jpeg"
+		contentArgs = []string{"--format", "jpg", "-q"}
+	case "png":
+		programFile = "/usr/local/bin/wkhtmltoimage"
+		contentType = "image/png"
+		contentArgs = []string{"--format", "png", "-q"}
+	default:
+		// defaults to pdf
+		programFile = "/usr/local/bin/wkhtmltopdf"
+		contentType = "application/pdf"
+		isPdf = true
+	}
+	response.Header().Set("Content-Type", contentType)
+
+	if isPdf {
+		if len(batchRequest.Requests) == 1 {
+			processRequest(batchRequest.Requests[0], programFile, contentArgs, response)
+		} else {
+			writePdfResponse(batchRequest, programFile, contentArgs, response)
+		}
+	} else {
+		processRequest(batchRequest.Requests[0], programFile, contentArgs, response)
+	}
+
+	// TODO: check if Stderr has anything, and issue http 500 instead.
+	logOutput(request, "200 OK")
+}
+
+func writePdfResponse(request batchRequest, programFile string, contentArgs []string, response http.ResponseWriter) {
+	pdfWriter := unipdf.NewPdfWriter()
+	output := new(bytes.Buffer)
+	for _, documentRequest := range request.Requests {
+		output.Reset()
+		processRequest(documentRequest, programFile, contentArgs, output)
+		pdfReader, err := unipdf.NewPdfReader(bytes.NewReader(output.Bytes()))
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		numPages, err := pdfReader.GetNumPages()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		for i := 0; i < numPages; i++ {
+			page, err := pdfReader.GetPage(i + 1)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			err = pdfWriter.AddPage(page)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+
+	tempFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer os.Remove(tempFile.Name())
+	pdfWriter.Write(tempFile)
+	tempFile.Seek(io.SeekStart, 0)
+	io.Copy(response, tempFile)
+}
+
+func processRequest(req *documentRequest, programFile string, contentArgs []string, output io.Writer) {
 	segments := make([]string, 0)
 	for key, element := range req.Options {
 		if element == true {
-			// if it was parsed from the JSON as an actual boolean, 
+			// if it was parsed from the JSON as an actual boolean,
 			// convert to command-line single argument	(--foo)
 			segments = append(segments, fmt.Sprintf("--%v", key))
 		} else if element != false {
@@ -83,22 +174,9 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 	for key, value := range req.Cookies {
 		segments = append(segments, "--cookie", key, url.QueryEscape(value))
 	}
-	var programFile string
-	var contentType string
-	switch req.Output {
-		case "jpg":
-			programFile = "/usr/local/bin/wkhtmltoimage"
-			contentType = "image/jpeg"
-			segments = append(segments, "--format", "jpg", "-q")
-		case "png":
-			programFile = "/usr/local/bin/wkhtmltoimage"
-			contentType = "image/png"
-			segments = append(segments, "--format", "png", "-q")
-		default:
-			// defaults to pdf
-			programFile = "/usr/local/bin/wkhtmltopdf"
-			contentType = "application/pdf"
-	}
+
+	segments = append(segments, contentArgs...)
+
 	if req.Content != "" {
 		segments = append(segments, "-", "-")
 	} else {
@@ -107,8 +185,7 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 	fmt.Println("\tRunning:", programFile, strings.Join(segments, " "))
 
 	cmd := exec.Command(programFile, segments...)
-	response.Header().Set("Content-Type", contentType)
-	cmd.Stdout = response
+	cmd.Stdout = output
 	var cmdStdin io.WriteCloser
 	if req.Content != "" {
 		cmdStdin, _ = cmd.StdinPipe()
@@ -120,6 +197,4 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 		cmdStdin.Close()
 	}
 	defer cmd.Wait()
-	// TODO: check if Stderr has anything, and issue http 500 instead.
-	logOutput(request, "200 OK")
 }

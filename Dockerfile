@@ -25,6 +25,8 @@ RUN useradd -rM appuser && \
 
 COPY /app /usr/src/app
 
+RUN go get github.com/unidoc/unidoc
+
 RUN mkdir /app && \
     mkdir /app/ssl && \
     cd /usr/src/app && \
@@ -41,3 +43,4 @@ EXPOSE 3000
 ENV SECURE true
 
 CMD ["/app/app"]
+
