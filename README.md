@@ -37,7 +37,7 @@ The body should contain a JSON-encoded object containing the following parameter
       "content": "<html><body><h1>Google.com<\/h1><p>The HTML that would have been fetched<\/p><\/body><\/html>",
       "options": {
         "margin-bottom": "1cm",
-        "orientation": "Landscape",
+        "orientation": "Landscape"
       },
       "cookies": {
         "foo": "bar",
