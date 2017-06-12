@@ -64,6 +64,13 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 		logOutput(request, "404 not found")
 		return
 	}
+	if request.Method == "GET" {
+		// answer GETs to allow pingdom monitoring
+		response.Header().Set("Allow", "GET")
+		response.WriteHeader(http.StatusOK)
+		logOutput(request, "200 OK")
+		return
+	}
 	if request.Method != "POST" {
 		response.Header().Set("Allow", "POST")
 		response.WriteHeader(http.StatusMethodNotAllowed)
