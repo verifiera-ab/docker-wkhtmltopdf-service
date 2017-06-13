@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	unipdf "github.com/unidoc/unidoc/pdf"
+	"github.com/goji/httpauth"
 )
 
 func main() {
@@ -24,14 +25,30 @@ func main() {
 		secure = "true"
 	}
 
-	http.HandleFunc("/", requestHandler)
+	authentication := strings.TrimSpace(os.Getenv("AUTHENTICATION"))
+	var handler http.Handler = http.HandlerFunc(requestHandler)
+	authIsOn := "OFF"
+	if authentication != "" {
+		sepIndex := strings.Index(authentication, ":")
+		username, password := "", ""
+		if sepIndex >= 0 {
+			username, password = authentication[:sepIndex], authentication[sepIndex+1:]
+		} else {
+			username, password = authentication, ""
+		}
+
+		authIsOn = "ON"
+		handler = httpauth.SimpleBasicAuth(username, password)(handler)
+	}
+	http.Handle("/", handler)
+
 	baseDir := filepath.Dir(os.Args[0])
 	var err error
 	if secure == "false" {
-		fmt.Println("INSECURE http server listening on", bindAddress)
+		fmt.Printf("INSECURE http server listening on %s, authentication is %s\n", bindAddress, authIsOn)
 		err = http.ListenAndServe(bindAddress, nil)
 	} else {
-		fmt.Println("Secure https server listening on", bindAddress)
+		fmt.Printf("Secure https server listening on %s, authentication is %s\n", bindAddress, authIsOn)
 		err = http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "ssl/cert.pem"), filepath.Join(baseDir, "ssl/key.pem"), nil)
 	}
 	if err != nil {
