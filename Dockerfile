@@ -26,6 +26,7 @@ RUN useradd -rM appuser && \
 COPY /app /usr/src/app
 
 RUN go get github.com/unidoc/unidoc
+RUN go get github.com/goji/httpauth
 
 RUN mkdir /app && \
     mkdir /app/ssl && \
