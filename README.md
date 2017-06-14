@@ -4,11 +4,13 @@ A dockerized webservice written in [Go](https://golang.org/) that uses [wkhtmlto
 
 ## Build & Run
 
-HTTP: `docker build -t wkhtmltopdf . && docker run --rm -it -p 3000:3000 -e SECURE=false wkhtmltopdf`
+HTTP: `docker build -t wkhtmltopdf . && docker run --rm -it -p 3000:3000 -e SECURE=false pukkasoftware/wkhtmltopdf`
 
-HTTPS: `docker build -t wkhtmltopdf . && docker run --rm -it -p 3000:3000 -v $(pwd)/app/ssl:/app/ssl wkhtmltopdf`
+HTTPS: `docker build -t wkhtmltopdf . && docker run --rm -it -p 3000:3000 -v $(pwd)/app/ssl:/app/ssl -e AUTHENTICATION=username:password pukkasoftware/wkhtmltopdf`
 
 For security purposes, we do not embed the SSL certificates in the image. Instead, mount a volume containing a cert.pem and key.pem to `/app/ssl`
+
+Optionally enable HTTP basic auth using the AUTHENTICATION environment variable. Failure to auth will result in a 401 error.
 
 ## Usage
 
