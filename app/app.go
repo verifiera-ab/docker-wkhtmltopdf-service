@@ -14,20 +14,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	unipdf "github.com/unidoc/unidoc/pdf"
+	unipdf "github.com/unidoc/unidoc/pdf/model"
 	"github.com/goji/httpauth"
+	"net/http/httputil"
 )
+
+var debugMode bool
 
 func main() {
 	const bindAddress = ":3000"
-	secure := strings.ToLower(strings.TrimSpace(os.Getenv("SECURE")))
-	if secure == "" {
-		secure = "true"
-	}
+	secure := strings.ToLower(strings.TrimSpace(os.Getenv("SECURE"))) != "false"
+	debugMode = strings.ToLower(strings.TrimSpace(os.Getenv("DEBUG"))) == "true"
 
 	authentication := strings.TrimSpace(os.Getenv("AUTHENTICATION"))
 	var handler http.Handler = http.HandlerFunc(requestHandler)
-	authIsOn := "OFF"
+	authIsOn := false
 	if authentication != "" {
 		sepIndex := strings.Index(authentication, ":")
 		username, password := "", ""
@@ -37,18 +38,18 @@ func main() {
 			username, password = authentication, ""
 		}
 
-		authIsOn = "ON"
+		authIsOn = true
 		handler = httpauth.SimpleBasicAuth(username, password)(handler)
 	}
 	http.Handle("/", handler)
 
 	baseDir := filepath.Dir(os.Args[0])
 	var err error
-	if secure == "false" {
-		fmt.Printf("INSECURE http server listening on %s, authentication is %s\n", bindAddress, authIsOn)
+	if !secure {
+		fmt.Printf("INSECURE http server listening on %s, authentication is %s, debug is %s\n", bindAddress, boolToOnOff(authIsOn), boolToOnOff(debugMode))
 		err = http.ListenAndServe(bindAddress, nil)
 	} else {
-		fmt.Printf("Secure https server listening on %s, authentication is %s\n", bindAddress, authIsOn)
+		fmt.Printf("Secure https server listening on %s, authentication is %s, debug is %s\n", bindAddress, boolToOnOff(authIsOn), boolToOnOff(debugMode))
 		err = http.ListenAndServeTLS(bindAddress, filepath.Join(baseDir, "ssl/cert.pem"), filepath.Join(baseDir, "ssl/key.pem"), nil)
 	}
 	if err != nil {
@@ -75,7 +76,23 @@ func logOutput(request *http.Request, message string) {
 	fmt.Println(ip, request.Method, request.URL, message)
 }
 
+func logRequestDetails(request *http.Request, body []byte) {
+	content, err := httputil.DumpRequest(request, body == nil)
+	if err != nil {
+		logOutput(request, "Can't dump request details.")
+	} else {
+		fmt.Println(strings.TrimSpace(string(content)))
+	}
+	if body != nil {
+		fmt.Printf("\n%s\n", string(body))
+	}
+}
+
 func requestHandler(response http.ResponseWriter, request *http.Request) {
+	if debugMode {
+		logRequestDetails(request,  nil)
+	}
+
 	if request.URL.Path != "/" {
 		response.WriteHeader(http.StatusNotFound)
 		logOutput(request, "404 not found")
@@ -94,11 +111,14 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 		logOutput(request, "405 not allowed")
 		return
 	}
-	decoder := json.NewDecoder(request.Body)
+	body, _ := ioutil.ReadAll(request.Body)
 	var batchRequest batchRequest
-	if err := decoder.Decode(&batchRequest); err != nil {
+	if err := json.Unmarshal(body, &batchRequest); err != nil {
 		response.WriteHeader(http.StatusBadRequest)
-		logOutput(request, "400 bad request (invalid JSON)")
+		if !debugMode {
+			logRequestDetails(request, body)
+		}
+		logOutput(request, fmt.Sprintf("400 bad request (invalid JSON): %v", err))
 		return
 	}
 	if len(batchRequest.Requests) == 0 {
@@ -221,4 +241,11 @@ func processRequest(req *documentRequest, programFile string, contentArgs []stri
 		cmdStdin.Close()
 	}
 	defer cmd.Wait()
+}
+
+func boolToOnOff(value bool) string {
+	if value {
+		return "ON"
+	}
+	return "OFF"
 }
