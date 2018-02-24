@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	unipdf "github.com/unidoc/unidoc/pdf/model"
 	"github.com/goji/httpauth"
+	unipdf "github.com/unidoc/unidoc/pdf/model"
 	"net/http/httputil"
 )
 
@@ -39,8 +39,20 @@ func main() {
 		}
 
 		authIsOn = true
-		handler = httpauth.SimpleBasicAuth(username, password)(handler)
+
+		authOpts := httpauth.AuthOptions{
+			Realm:               "Restricted",
+			User:                username,
+			Password:            password,
+			UnauthorizedHandler: http.HandlerFunc(unauthorizedHandler),
+		}
+		handler = httpauth.BasicAuth(authOpts)(handler)
 	}
+
+	if debugMode {
+		handler = debugMiddleware(handler)
+	}
+
 	http.Handle("/", handler)
 
 	baseDir := filepath.Dir(os.Args[0])
@@ -89,10 +101,6 @@ func logRequestDetails(request *http.Request, body []byte) {
 }
 
 func requestHandler(response http.ResponseWriter, request *http.Request) {
-	if debugMode {
-		logRequestDetails(request,  nil)
-	}
-
 	if request.URL.Path != "/" {
 		response.WriteHeader(http.StatusNotFound)
 		logOutput(request, "404 not found")
@@ -248,4 +256,19 @@ func boolToOnOff(value bool) string {
 		return "ON"
 	}
 	return "OFF"
+}
+
+func debugMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logRequestDetails(r, nil)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func unauthorizedHandler(w http.ResponseWriter, r *http.Request) {
+	if !debugMode {
+		logRequestDetails(r, nil)
+	}
+	logOutput(r, "401 UNAUTHORIZED")
+	http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 }
