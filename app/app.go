@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/goji/httpauth"
-	unipdf "github.com/unidoc/unidoc/pdf/model"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"net/http/httputil"
 )
 
@@ -169,44 +169,24 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 func writePdfResponse(request batchRequest, programFile string, contentArgs []string, response http.ResponseWriter) {
-	pdfWriter := unipdf.NewPdfWriter()
-	output := new(bytes.Buffer)
-	for _, documentRequest := range request.Requests {
-		output.Reset()
-		processRequest(documentRequest, programFile, contentArgs, output)
-		pdfReader, err := unipdf.NewPdfReader(bytes.NewReader(output.Bytes()))
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		numPages, err := pdfReader.GetNumPages()
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		for i := 0; i < numPages; i++ {
-			page, err := pdfReader.GetPage(i + 1)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			err = pdfWriter.AddPage(page)
-			if err != nil {
-				fmt.Println(err)
-			}
-		}
-	}
-
 	tempFile, err := ioutil.TempFile("", "")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	defer os.Remove(tempFile.Name())
-	pdfWriter.Write(tempFile)
+
+	outputs := make([]io.ReadSeeker, len(request.Requests))
+	for i, documentRequest := range request.Requests {
+		var output bytes.Buffer
+		processRequest(documentRequest, programFile, contentArgs, &output)
+		outputs[i] = bytes.NewReader(output.Bytes())
+	}
+	err = api.Merge(outputs, tempFile, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	tempFile.Seek(io.SeekStart, 0)
 	io.Copy(response, tempFile)
 }

@@ -1,4 +1,17 @@
-FROM golang:1.7
+FROM golang:1.14 as builder
+
+WORKDIR /app
+
+COPY /app/go.mod ./
+COPY /app/go.sum ./
+
+RUN go mod download
+
+COPY /app/*.go ./
+
+RUN go build -v -o app
+
+FROM debian:jessie
 
 MAINTAINER Potiguar Faga <potz@potz.me>
 
@@ -10,9 +23,9 @@ ENV DOWNLOAD_URL "https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/$
 
 # Create system user first so the User ID gets assigned
 # consistently, regardless of dependencies added later
-RUN useradd -rM appuser && \
+RUN useradd -rm appuser && \
     apt-get update && \
-    apt-get install -y --no-install-recommends curl \
+    apt-get install -y --no-install-recommends curl ca-certificates \
        fontconfig libfontconfig1 libfreetype6 \
        libpng12-0 libjpeg62-turbo \
        libssl1.0.0 libx11-6 libxext6 libxrender1 \
@@ -23,16 +36,12 @@ RUN useradd -rM appuser && \
     apt-get purge -y curl && \
     rm -rf /var/lib/apt/lists/*
 
-COPY /app /usr/src/app
-
-RUN go get github.com/unidoc/unidoc/...
-RUN go get github.com/goji/httpauth
-
 RUN mkdir /app && \
-    mkdir /app/ssl && \
-    cd /usr/src/app && \
-    go build -v -o /app/app && \
-    chown -R appuser:appuser /app
+    mkdir /app/ssl
+
+COPY --from=builder /app/app /app/app
+
+RUN chown -R appuser:appuser /home/appuser
 
 VOLUME /app/ssl
 
