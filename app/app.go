@@ -23,7 +23,7 @@ var debugMode bool
 
 func main() {
 	const bindAddress = ":3000"
-	secure := strings.ToLower(strings.TrimSpace(os.Getenv("SECURE"))) != "false"
+	secure := strings.ToLower(strings.TrimSpace(os.Getenv("SECURE"))) == "true"
 	debugMode = strings.ToLower(strings.TrimSpace(os.Getenv("DEBUG"))) == "true"
 
 	authentication := strings.TrimSpace(os.Getenv("AUTHENTICATION"))
@@ -139,16 +139,16 @@ func requestHandler(response http.ResponseWriter, request *http.Request) {
 	isPdf := false
 	switch batchRequest.Output {
 	case "jpg":
-		programFile = "/usr/local/bin/wkhtmltoimage"
+		programFile = "wkhtmltoimage"
 		contentType = "image/jpeg"
 		contentArgs = []string{"--format", "jpg", "-q"}
 	case "png":
-		programFile = "/usr/local/bin/wkhtmltoimage"
+		programFile = "wkhtmltoimage"
 		contentType = "image/png"
 		contentArgs = []string{"--format", "png", "-q"}
 	default:
 		// defaults to pdf
-		programFile = "/usr/local/bin/wkhtmltopdf"
+		programFile = "wkhtmltopdf"
 		contentType = "application/pdf"
 		isPdf = true
 	}
