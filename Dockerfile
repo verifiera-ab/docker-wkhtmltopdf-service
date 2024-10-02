@@ -16,7 +16,8 @@ FROM debian:jessie
 MAINTAINER Potiguar Faga <potz@potz.me>
 
 ENV WKHTML_MAJOR 0.12
-ENV WKHTML_MINOR 2.1
+ENV WKHTML_MINOR 6.1-2
+ENV SECURE=false
 
 # Builds the wkhtmltopdf download URL based on version numbers above
 ENV DOWNLOAD_URL "https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTML_MAJOR}.${WKHTML_MINOR}/wkhtmltox-${WKHTML_MAJOR}.${WKHTML_MINOR}_linux-jessie-amd64.deb"
