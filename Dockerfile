@@ -1,4 +1,4 @@
-FROM golang:1.14 as builder
+FROM golang:1.23.2-bullseye as builder
 
 WORKDIR /app
 
@@ -11,37 +11,21 @@ COPY /app/*.go ./
 
 RUN go build -v -o app
 
-FROM debian:jessie
+FROM ubuntu:22.04
 
-MAINTAINER Potiguar Faga <potz@potz.me>
+MAINTAINER Oleg Lemesenko <oleg@verifiera.se>
 
-ENV WKHTML_MAJOR 0.12
-ENV WKHTML_MINOR 6.1-2
-ENV SECURE=false
-
-# Builds the wkhtmltopdf download URL based on version numbers above
-ENV DOWNLOAD_URL "https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/${WKHTML_MAJOR}.${WKHTML_MINOR}/wkhtmltox-${WKHTML_MAJOR}.${WKHTML_MINOR}_linux-jessie-amd64.deb"
-
-# Create system user first so the User ID gets assigned
-# consistently, regardless of dependencies added later
-RUN useradd -rm appuser && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates \
-       fontconfig libfontconfig1 libfreetype6 \
-       libpng12-0 libjpeg62-turbo \
-       libssl1.0.0 libx11-6 libxext6 libxrender1 \
-       xfonts-base xfonts-75dpi && \
-    curl -L -o /tmp/wkhtmltox.deb $DOWNLOAD_URL && \
-    dpkg -i /tmp/wkhtmltox.deb && \
-    rm /tmp/wkhtmltox.deb && \
-    apt-get purge -y curl && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends wkhtmltopdf
 
 RUN mkdir /app && \
     mkdir /app/ssl
 
+
+
 COPY --from=builder /app/app /app/app
 
+RUN useradd -rm appuser
 RUN chown -R appuser:appuser /home/appuser
 
 VOLUME /app/ssl
@@ -51,7 +35,7 @@ WORKDIR /app
 EXPOSE 3000
 
 # whether to run under SSL or not
-ENV SECURE true
+ENV SECURE false
 
 CMD ["/app/app"]
 
